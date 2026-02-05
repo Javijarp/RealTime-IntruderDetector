@@ -1,5 +1,6 @@
 package com.javier.security_backend.controller;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,11 +16,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.javier.security_backend.dto.DetectionEventDTO;
 import com.javier.security_backend.model.DetectionEvent;
+import com.javier.security_backend.model.Frame;
 import com.javier.security_backend.service.DetectionEventService;
+import com.javier.security_backend.service.FrameService;
 
 import jakarta.validation.Valid;
 
@@ -30,9 +35,11 @@ public class DetectionEventController {
     private static final Logger log = LoggerFactory.getLogger(DetectionEventController.class);
     
     private final DetectionEventService service;
+    private final FrameService frameService;
     
-    public DetectionEventController(DetectionEventService service) {
+    public DetectionEventController(DetectionEventService service, FrameService frameService) {
         this.service = service;
+        this.frameService = frameService;
     }
     
     /**
@@ -48,18 +55,49 @@ public class DetectionEventController {
     }
     
     /**
-     * Endpoint for edge module to POST detection events
+     * Endpoint for edge module to POST detection events with optional frame image
      */
     @PostMapping("/api/events")
-    public ResponseEntity<Map<String, Object>> createEvent(@Valid @RequestBody DetectionEventDTO dto) {
-        log.info("Received detection event: {}", dto);
+    public ResponseEntity<Map<String, Object>> createEvent(
+            @Valid @RequestBody(required = false) DetectionEventDTO dto,
+            @RequestParam(value = "frameImage", required = false) MultipartFile frameImage) {
         
         try {
-            service.saveEvent(dto);
+            // Handle multipart form data or JSON
+            if (dto == null && frameImage == null) {
+                throw new IllegalArgumentException("Either detection event or frame image must be provided");
+            }
+            
+            DetectionEvent savedEvent = null;
+            Frame savedFrame = null;
+            
+            // Save detection event
+            if (dto != null) {
+                log.info("Received detection event: {}", dto);
+                savedEvent = service.saveEvent(dto);
+            }
+            
+            // Save frame image if provided
+            if (frameImage != null && !frameImage.isEmpty()) {
+                log.info("Saving frame image: {} bytes", frameImage.getSize());
+                Integer frameNumber = dto != null ? dto.getFrameId() : null;
+                savedFrame = frameService.saveFrame(
+                    frameImage.getBytes(),
+                    frameImage.getContentType(),
+                    frameNumber
+                );
+                
+                // Link frame to detection event
+                if (savedEvent != null) {
+                    savedEvent.setFrameData(savedFrame);
+                }
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Event received successfully");
+            if (savedEvent != null) response.put("eventId", savedEvent.getId());
+            if (savedFrame != null) response.put("frameId", savedFrame.getId());
             
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
             

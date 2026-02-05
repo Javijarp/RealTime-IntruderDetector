@@ -39,6 +39,10 @@ class EdgeModule:
         self._frame_counter = 0
         self._running = False
         self._previous_detection_state: dict[str, bool] = {}  # Track if entity was detected last frame
+        
+        # Store latest frame to send with events
+        self._latest_frame = None
+        self._latest_frame_lock = threading.Lock()
 
     # ─── THREAD 1: CAPTURE (High Priority) ─────────────────────────
     def _capture_thread(self) -> None:
@@ -133,6 +137,11 @@ class EdgeModule:
                 frame_id, frame = self._frame_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
+
+            # Store latest frame to send with events
+            if frame is not None:
+                with self._latest_frame_lock:
+                    self._latest_frame = frame.copy()
 
             process_start = time.perf_counter()
             detections = run_yolo_inference(frame_id, frame)
@@ -233,7 +242,7 @@ class EdgeModule:
         log("[ENVIO ] Hilo terminado.")
 
     def _send_event(self, event: DetectionEvent) -> None:
-        """Attempt to send event via HTTP POST."""
+        """Attempt to send event via HTTP POST with frame image."""
         payload = event.to_dict()
         latency_ms = (time.perf_counter() - event.capture_time) * 1000
 
@@ -245,7 +254,11 @@ class EdgeModule:
             f"{'✓ OK' if latency_ms < Config.DEADLINE_INTRUSO_MS else '✗ EXCEDIDO'})"
         )
 
-        success = simulated_http_post(event)
+        # Get latest frame to send with event
+        with self._latest_frame_lock:
+            frame_to_send = self._latest_frame.copy() if self._latest_frame is not None else None
+
+        success = simulated_http_post(event, frame=frame_to_send)
 
         if success:
             event.sent = True
@@ -268,6 +281,10 @@ class EdgeModule:
             f"evento(s) pendientes ──"
         )
         now = time.perf_counter()
+        
+        # Get latest frame for buffer retries
+        with self._latest_frame_lock:
+            frame_to_send = self._latest_frame.copy() if self._latest_frame is not None else None
 
         for event in pending:
             age_s = now - event.capture_time
@@ -278,7 +295,7 @@ class EdgeModule:
                 )
                 continue
 
-            success = simulated_http_post(event)
+            success = simulated_http_post(event, frame=frame_to_send)
 
             if success:
                 event.sent = True

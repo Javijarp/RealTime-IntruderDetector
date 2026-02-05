@@ -34,8 +34,14 @@ public class Frame {
     @Column(name = "frame_number", nullable = false)
     private Integer frameNumber;
     
-    @Column(name = "image_path", nullable = false)
-    private String imagePath; // Path to stored frame image
+    @Column(name = "image_data", columnDefinition = "BYTEA")
+    private byte[] imageData; // Raw JPEG bytes from edge module
+    
+    @Column(name = "image_type")
+    private String imageType; // "jpeg", "png", etc.
+    
+    @Column(name = "image_path")
+    private String imagePath; // Legacy: Path to stored frame image
     
     @Column(name = "timestamp", nullable = false)
     private Instant timestamp;

@@ -36,18 +36,32 @@ public class FrameService {
     }
     
     @Transactional
-    public Frame saveFrame(FrameDTO dto) {
-        log.info("Saving frame {} with {} detected faces", dto.getFrameNumber(), dto.getFaces().size());
-        
+    public Frame saveFrame(byte[] imageData, String imageType, Integer frameNumber) {
         try {
             Frame frame = new Frame();
-            frame.setFrameNumber(dto.getFrameNumber());
-            frame.setImagePath(dto.getImagePath());
-            frame.setTimestamp(Instant.parse(dto.getTimestamp()));
+            frame.setFrameNumber(frameNumber);
+            frame.setImageData(imageData);
+            frame.setImageType(imageType);
+            frame.setTimestamp(Instant.now());
             
-            // Link to detection event if provided
-            if (dto.getDetectionEventId() != null) {
-                Optional<DetectionEvent> event = detectionEventRepository.findById(dto.getDetectionEventId());
+            Frame saved = frameRepository.save(frame);
+            log.info("Frame saved successfully - frameId: {} with image size: {} bytes", saved.getId(), imageData.length);
+            return saved;
+        } catch (Exception e) {
+            log.error("Error saving frame", e);
+            throw new RuntimeException("Failed to save frame", e);
+        }
+    }
+    
+    public Optional<Frame> getFrameById(Long id) {
+        return frameRepository.findById(id);
+    }
+    
+    public Optional<Frame> getFrameByFrameNumber(Integer frameNumber) {
+        return frameRepository.findByFrameNumber(frameNumber);
+    }
+    
+    @Transactional
                 event.ifPresent(frame::setDetectionEvent);
             }
             

@@ -4,6 +4,8 @@ import time
 import random
 import requests
 import json
+import cv2
+import io
 
 try:
     from .config import Config
@@ -13,14 +15,36 @@ except ImportError:
     from shared import log
 
 
-def simulated_http_post(event) -> bool:
+def _encode_frame(frame) -> bytes:
     """
-    Send HTTP POST to backend with detection event.
+    Encode OpenCV frame to JPEG bytes.
+    
+    Args:
+        frame: OpenCV image array
+        
+    Returns:
+        bytes: JPEG-encoded image data
+    """
+    if frame is None:
+        return None
+    try:
+        success, encoded = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if success:
+            return encoded.tobytes()
+    except Exception as e:
+        log(f"[NETWORK] Error encoding frame: {str(e)}")
+    return None
+
+
+def simulated_http_post(event, frame=None) -> bool:
+    """
+    Send HTTP POST to backend with detection event and optional frame image.
 
     Handles network failures gracefully and respects test flags.
 
     Args:
         event: DetectionEvent to send
+        frame: Optional OpenCV frame to send as image
 
     Returns:
         bool: True if successful, False if network failure
@@ -35,11 +59,22 @@ def simulated_http_post(event) -> bool:
         # Simulate network latency (5-20 ms)
         time.sleep(random.uniform(0.005, 0.020))
         
+        # Prepare multipart form data
+        files = {
+            'event': (None, json.dumps(payload), 'application/json')
+        }
+        
+        # Add frame image if provided
+        if frame is not None:
+            frame_bytes = _encode_frame(frame)
+            if frame_bytes:
+                files['frameImage'] = ('frame.jpg', frame_bytes, 'image/jpeg')
+                log(f"[NETWORK] Frame encoded: {len(frame_bytes)} bytes")
+        
         response = requests.post(
             Config.BACKEND_URL,
-            json=payload,
-            timeout=5,
-            headers={"Content-Type": "application/json"}
+            files=files,
+            timeout=5
         )
         
         if response.status_code == 201:
