@@ -35,12 +35,12 @@ class DetectionEvent:
         self.sent = False
 
     def to_dict(self) -> dict:
-        """Serialize event to dictionary for transmission."""
+        """Serialize event to dictionary for transmission (camelCase for backend API)."""
         return {
-            "event_id": self.id,
-            "entity_type": self.entity_type,
+            "eventId": self.id,
+            "entityType": self.entity_type,
             "confidence": self.confidence,
-            "frame_id": self.frame_id,
+            "frameId": self.frame_id,
             "timestamp": self.timestamp,
         }
 

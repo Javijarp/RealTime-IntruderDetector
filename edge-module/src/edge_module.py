@@ -38,6 +38,7 @@ class EdgeModule:
         self._cooldown_lock = threading.Lock()
         self._frame_counter = 0
         self._running = False
+        self._previous_detection_state: dict[str, bool] = {}  # Track if entity was detected last frame
 
     # ─── THREAD 1: CAPTURE (High Priority) ─────────────────────────
     def _capture_thread(self) -> None:
@@ -139,20 +140,40 @@ class EdgeModule:
             if Config.LIVE_MODE and frame is not None:
                 _shared_frame.write(frame, detections)
 
+            # Track state change: no detection → detection
+            has_detections = len(detections) > 0
+            
+            # Update previous state and check for transition
+            had_detections_before = any(self._previous_detection_state.values())
+            
             if not detections:
-                log(f"[PROCESO] Frame {frame_id}: Sin detecciones.")
+                # No detections in this frame
+                if had_detections_before:
+                    log(f"[PROCESO] Frame {frame_id}: Transición detectada (con → sin detección)")
+                self._previous_detection_state.clear()
                 continue
 
-            self._process_detections(frame_id, detections, process_start)
+            # Only process detections if transitioning from no-detection to detection
+            if not had_detections_before:
+                log(f"[PROCESO] Frame {frame_id}: TRANSICIÓN DE ESTADO - sin detección → CON DETECCIÓN")
+                self._process_detections(frame_id, detections, process_start)
+                # Update state to track that we now have detections
+                for det in detections:
+                    self._previous_detection_state[det["class"]] = True
+            else:
+                log(f"[PROCESO] Frame {frame_id}: Entidad(es) aún presente(s). Sin nuevo evento.")
 
         log("[PROCESO] Hilo terminado.")
 
     def _process_detections(
         self, frame_id: int, detections: list[dict], process_start: float
     ) -> None:
-        """Apply cooldown and confidence filters."""
+        """Create detection event on state transition (no detection → detection)."""
         now = time.perf_counter()
-
+        
+        # Use the first valid detection to create the event
+        event_created = False
+        
         for det in detections:
             cls = det["class"]
             confidence = det["confidence"]
@@ -164,30 +185,30 @@ class EdgeModule:
                 )
                 continue
 
-            with self._cooldown_lock:
-                ultima = self._last_detection.get(cls, 0.0)
-                if (now - ultima) < Config.COOLDOWN_S:
+            # Only create ONE event for the state transition
+            if not event_created:
+                event = DetectionEvent(cls, confidence, frame_id)
+                event.capture_time = process_start
+
+                try:
+                    self._event_queue.put_nowait(event)
                     log(
-                        f"[PROCESO] Frame {frame_id}: {cls} en cooldown "
-                        f"(quedan {Config.COOLDOWN_S - (now - ultima):.2f} s)"
+                        f"[PROCESO] Frame {frame_id}: EVENTO ENVIADO - {cls} detectado "
+                        f"(conf={confidence:.3f})"
                     )
-                    continue
-                self._last_detection[cls] = now
-
-            event = DetectionEvent(cls, confidence, frame_id)
-            event.capture_time = process_start
-
-            try:
-                self._event_queue.put_nowait(event)
+                    event_created = True
+                except queue.Full:
+                    self._local_buffer.push(event)
+                    log(
+                        f"[PROCESO] Frame {frame_id}: Cola de envío llena. "
+                        f"Evento al buffer local."
+                    )
+                    event_created = True
+            else:
+                # Additional detections in same frame - log but don't create new event
                 log(
-                    f"[PROCESO] Frame {frame_id}: {cls} detectado "
-                    f"(conf={confidence}). Evento encolado para envío."
-                )
-            except queue.Full:
-                self._local_buffer.push(event)
-                log(
-                    f"[PROCESO] Frame {frame_id}: Cola de envío llena. "
-                    f"Evento al buffer local."
+                    f"[PROCESO] Frame {frame_id}: {cls} también detectado "
+                    f"(conf={confidence:.3f}), pero evento ya creado."
                 )
 
     # ─── THREAD 3: TRANSMISSION (Low Priority) ────────────────────
