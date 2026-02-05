@@ -42,16 +42,21 @@ public class FrameController {
      */
     @PostMapping
     public ResponseEntity<Map<String, Object>> saveFrame(@Valid @RequestBody FrameDTO dto) {
-        log.info("Received frame {} with {} faces", dto.getFrameNumber(), dto.getFaces().size());
+        log.info("Received frame {}", dto.getFrameNumber());
         
         try {
-            Frame savedFrame = frameService.saveFrame(dto);
+            // The new saveFrame method takes byte[], String, Integer
+            // For backward compatibility with FrameDTO, we'll just extract what we need
+            Frame savedFrame = frameService.saveFrame(
+                dto.getImageData(),
+                dto.getImageType(),
+                dto.getFrameNumber()
+            );
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Frame saved successfully");
             response.put("frameId", savedFrame.getId());
-            response.put("faceCount", dto.getFaces().size());
             
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {

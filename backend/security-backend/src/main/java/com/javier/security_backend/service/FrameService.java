@@ -61,42 +61,8 @@ public class FrameService {
         return frameRepository.findByFrameNumber(frameNumber);
     }
     
-    @Transactional
-                event.ifPresent(frame::setDetectionEvent);
-            }
-            
-            // Save frame first
-            Frame savedFrame = frameRepository.save(frame);
-            
-            // Save associated faces
-            for (FaceDTO faceDto : dto.getFaces()) {
-                Face face = new Face();
-                face.setFaceImagePath(faceDto.getFaceImagePath());
-                face.setConfidence(faceDto.getConfidence());
-                face.setBoundingBox(faceDto.getBoundingBox());
-                face.setAge(faceDto.getAge());
-                face.setGender(faceDto.getGender());
-                face.setEmotion(faceDto.getEmotion());
-                face.setFaceEncoding(faceDto.getFaceEncoding());
-                face.setFrame(savedFrame);
-                
-                faceRepository.save(face);
-            }
-            
-            log.info("Frame saved successfully with ID: {}", savedFrame.getId());
-            return savedFrame;
-        } catch (Exception e) {
-            log.error("Error saving frame", e);
-            throw e;
-        }
-    }
-    
     public List<Frame> getAllFrames() {
         return frameRepository.findAll();
-    }
-    
-    public Optional<Frame> getFrameById(Long id) {
-        return frameRepository.findById(id);
     }
     
     public List<Frame> getFramesByDetectionEvent(Long eventId) {
