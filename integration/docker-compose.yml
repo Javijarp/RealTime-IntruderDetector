@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  backend:
+    image: backend:latest
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - DATABASE_URL=jdbc:mysql://db:3306/face_recognition
+      - DATABASE_USERNAME=root
+      - DATABASE_PASSWORD=password
+    depends_on:
+      - db
+
+  frontend:
+    image: frontend:latest
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  edge-module:
+    image: edge-module:latest
+    build:
+      context: ../edge-module
+      dockerfile: Dockerfile
+    depends_on:
+      - backend
+
+  db:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: face_recognition
+    ports:
+      - "3306:3306"
+
+networks:
+  default:
+    driver: bridge
