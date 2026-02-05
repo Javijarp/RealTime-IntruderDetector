@@ -45,7 +45,7 @@ public class Face {
     @Column(name = "emotion", nullable = true)
     private String emotion; // Happy, Sad, Angry, Neutral, etc.
     
-    @Column(name = "face_encoding", nullable = true, columnDefinition = "LONGTEXT")
+    @Column(name = "face_encoding", nullable = true, columnDefinition = "TEXT")
     private String faceEncoding; // Base64-encoded face embedding/vector
     
     @Column(name = "created_at", nullable = false, updatable = false)
