@@ -1,48 +1,78 @@
 version: '3.8'
 
 services:
-  backend:
-    image: backend:latest
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: face_recognition_db
+    restart: always
     environment:
-      - SPRING_PROFILES_ACTIVE=dev
-      - DATABASE_URL=jdbc:mysql://db:3306/face_recognition
-      - DATABASE_USERNAME=root
-      - DATABASE_PASSWORD=password
-    depends_on:
-      - db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: security_db
+    ports:
+      - "0.0.0.0:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - face_recognition_network
 
+  # Spring Boot Backend
+  backend:
+    build:
+      context: ../backend/security-backend
+      dockerfile: Dockerfile
+    container_name: face_recognition_backend
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/security_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SERVER_PORT=8080
+      - SERVER_SERVLET_CONTEXT_PATH=/api
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - face_recognition_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/api/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # React Frontend
   frontend:
-    image: frontend:latest
     build:
       context: ../frontend
       dockerfile: Dockerfile
+    container_name: face_recognition_frontend
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "0.0.0.0:3000:3000"
     depends_on:
       - backend
-
-  edge-module:
-    image: edge-module:latest
-    build:
-      context: ../edge-module
-      dockerfile: Dockerfile
-    depends_on:
-      - backend
-
-  db:
-    image: mysql:5.7
-    restart: always
+    networks:
+      - face_recognition_network
     environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: face_recognition
-    ports:
-      - "3306:3306"
+      - REACT_APP_API_URL=http://backend:8080/api
+
+volumes:
+  postgres_data:
+    driver: local
 
 networks:
-  default:
+  face_recognition_network:
     driver: bridge

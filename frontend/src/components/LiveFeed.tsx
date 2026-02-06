@@ -14,12 +14,9 @@ const LiveFeed: React.FC = () => {
         startVideo();
 
         return () => {
-            if (videoRef.current) {
-                const stream = videoRef.current.srcObject as MediaStream;
-                if (stream) {
-                    const tracks = stream.getTracks();
-                    tracks.forEach(track => track.stop());
-                }
+            if (videoRef.current && videoRef.current.srcObject) {
+                const stream: any = videoRef.current.srcObject;
+                stream.getTracks().forEach((track: any) => track.stop());
             }
         };
     }, []);

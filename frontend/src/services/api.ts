@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api/events';
+// Use environment variable or fallback to localhost for development
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+const API_URL = `${API_BASE_URL}/events`;
 
 export const fetchEvents = async () => {
     try {
