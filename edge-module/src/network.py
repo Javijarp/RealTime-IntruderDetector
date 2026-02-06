@@ -15,12 +15,13 @@ except ImportError:
     from shared import log
 
 
-def _encode_frame(frame) -> bytes:
+def _encode_frame(frame, quality=85) -> bytes:
     """
     Encode OpenCV frame to JPEG bytes.
     
     Args:
         frame: OpenCV image array
+        quality: JPEG quality (1-100)
         
     Returns:
         bytes: JPEG-encoded image data
@@ -28,12 +29,56 @@ def _encode_frame(frame) -> bytes:
     if frame is None:
         return None
     try:
-        success, encoded = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        success, encoded = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
         if success:
             return encoded.tobytes()
     except Exception as e:
         log(f"[NETWORK] Error encoding frame: {str(e)}")
     return None
+
+
+def send_stream_frame(frame) -> bool:
+    """
+    Send a single frame to the backend streaming endpoint.
+    
+    Args:
+        frame: OpenCV frame to send
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    if frame is None:
+        return False
+        
+    if Config.SIMULATE_NETWORK_FAILURE:
+        return False
+    
+    try:
+        # Encode frame with moderate quality for streaming
+        frame_bytes = _encode_frame(frame, quality=75)
+        if not frame_bytes:
+            return False
+        
+        # Send to stream endpoint
+        files = {
+            'frame': ('frame.jpg', frame_bytes, 'image/jpeg')
+        }
+        data = {
+            'contentType': 'image/jpeg'
+        }
+        
+        response = requests.post(
+            Config.BACKEND_STREAM_URL,
+            data=data,
+            files=files,
+            timeout=2  # Shorter timeout for streaming
+        )
+        
+        return response.status_code in [200, 201]
+        
+    except Exception as e:
+        # Silently fail for streaming to avoid log spam
+        return False
 
 
 def simulated_http_post(event, frame=None) -> bool:

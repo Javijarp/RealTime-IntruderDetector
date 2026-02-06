@@ -12,7 +12,7 @@ try:
     from .shared import SharedFrame, log
     from .inference import run_yolo_inference
     from .drawing import draw_boxes
-    from .network import simulated_http_post
+    from .network import simulated_http_post, send_stream_frame
 except ImportError:
     from config import Config
     from models import DetectionEvent
@@ -20,7 +20,7 @@ except ImportError:
     from shared import SharedFrame, log
     from inference import run_yolo_inference
     from drawing import draw_boxes
-    from network import simulated_http_post
+    from network import simulated_http_post, send_stream_frame
 
 # Global shared frame (LIVE mode only)
 _shared_frame = SharedFrame()
@@ -307,6 +307,47 @@ class EdgeModule:
                 self._local_buffer.push(event)
                 log(f"[ENVIO ]   Reintento ✗ — Devuesto al buffer.")
 
+    # ─── THREAD 4: VIDEO STREAMING (Continuous) ────────────────────
+    def _streaming_thread(self) -> None:
+        """Continuously stream frames to backend for live preview."""
+        if not Config.ENABLE_VIDEO_STREAMING:
+            log("[STREAM] Video streaming disabled in config")
+            return
+            
+        log(f"[STREAM] Hilo iniciado. Enviando frames a {Config.STREAM_FPS} FPS...")
+        frame_interval = 1.0 / Config.STREAM_FPS
+        last_send_time = time.perf_counter()
+        frames_sent = 0
+        last_log_time = time.perf_counter()
+        
+        while self._running:
+            now = time.perf_counter()
+            
+            # Rate limiting
+            if (now - last_send_time) < frame_interval:
+                time.sleep(0.01)
+                continue
+            
+            # Get latest frame
+            with self._latest_frame_lock:
+                frame_to_stream = self._latest_frame.copy() if self._latest_frame is not None else None
+            
+            if frame_to_stream is not None:
+                success = send_stream_frame(frame_to_stream)
+                if success:
+                    frames_sent += 1
+                    
+            last_send_time = now
+            
+            # Log stats every 5 seconds
+            if (now - last_log_time) >= 5.0:
+                fps_actual = frames_sent / (now - last_log_time)
+                log(f"[STREAM] Streaming stats: {frames_sent} frames sent, {fps_actual:.1f} FPS")
+                frames_sent = 0
+                last_log_time = now
+        
+        log("[STREAM] Hilo terminado.")
+
     def display_frame_mainthread(self) -> None:
         """Display annotated frames in OpenCV window (main thread)."""
         import cv2
@@ -346,7 +387,7 @@ class EdgeModule:
         log("[DISPLAY] Ventana cerrada.")
 
     def start(self) -> list:
-        """Start all 3 threads."""
+        """Start all threads (capture, processing, transmission, streaming)."""
         self._running = True
 
         threads = [
@@ -366,6 +407,16 @@ class EdgeModule:
                 daemon=True,
             ),
         ]
+        
+        # Add streaming thread if enabled
+        if Config.ENABLE_VIDEO_STREAMING:
+            threads.append(
+                threading.Thread(
+                    target=self._streaming_thread,
+                    name="Streaming.......",
+                    daemon=True,
+                )
+            )
 
         for t in threads:
             t.start()
@@ -375,8 +426,9 @@ class EdgeModule:
             if Config.LIVE_MODE
             else "SIMULACIÓN"
         )
+        streaming_status = "Streaming ON" if Config.ENABLE_VIDEO_STREAMING else "Streaming OFF"
         log(
-            f"[MAIN  ] Sistema Edge iniciado — modo {modo}. "
+            f"[MAIN  ] Sistema Edge iniciado — modo {modo}, {streaming_status}. "
             f"Presiona Ctrl+C para detener."
         )
         return threads

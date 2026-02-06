@@ -20,9 +20,13 @@ export default function VideoStream({ streamId = "default" }) {
   const frameTimestampRef = useRef(Date.now());
 
   useEffect(() => {
-    // Connect to WebSocket
+    // Connect to WebSocket - use dynamic host
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${wsProtocol}//localhost:8080/ws/stream`;
+    // Use the backend server IP directly - change this to match your backend
+    const wsHost = "192.168.5.74:8080";  // Backend server address
+    const wsUrl = `${wsProtocol}//${wsHost}/ws/stream`;
+
+    console.log("VideoStream connecting to:", wsUrl);
 
     const client = new WebSocketClient(wsUrl);
 
@@ -139,9 +143,8 @@ export default function VideoStream({ streamId = "default" }) {
         {/* Connection Status Overlay */}
         <div className="absolute top-4 left-4 flex items-center gap-2">
           <div
-            className={`w-3 h-3 rounded-full ${
-              isConnected ? "bg-green-500" : "bg-red-500"
-            } animate-pulse`}
+            className={`w-3 h-3 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"
+              } animate-pulse`}
           />
           <span className="text-white text-sm font-semibold">
             {isConnected ? "Connected" : "Disconnected"}

@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.javier.security_backend.dto.DetectionEventDTO;
 import com.javier.security_backend.model.DetectionEvent;
 import com.javier.security_backend.model.Frame;
+import com.javier.security_backend.service.AlertService;
 import com.javier.security_backend.service.DetectionEventService;
 import com.javier.security_backend.service.FrameService;
 
@@ -35,10 +36,13 @@ public class DetectionEventController {
 
     private final DetectionEventService service;
     private final FrameService frameService;
+    private final AlertService alertService;
 
-    public DetectionEventController(DetectionEventService service, FrameService frameService) {
+    public DetectionEventController(DetectionEventService service, FrameService frameService,
+            AlertService alertService) {
         this.service = service;
         this.frameService = frameService;
+        this.alertService = alertService;
     }
 
     /**
@@ -61,6 +65,9 @@ public class DetectionEventController {
         try {
             log.info("Received detection event (JSON): {}", dto);
             DetectionEvent savedEvent = service.saveEvent(dto);
+
+            // Trigger alert check (without frame)
+            alertService.processDetection(savedEvent, null);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -112,6 +119,9 @@ public class DetectionEventController {
                 // Link frame to detection event
                 savedEvent.setFrameData(savedFrame);
             }
+
+            // Trigger alert check (with frame if available)
+            alertService.processDetection(savedEvent, savedFrame);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -176,6 +186,27 @@ public class DetectionEventController {
 
         Map<String, String> response = new HashMap<>();
         response.put("message", "Event marked as processed");
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Get alert service state
+     */
+    @GetMapping("/alerts/state")
+    public ResponseEntity<Map<String, Object>> getAlertState() {
+        return ResponseEntity.ok(alertService.getState());
+    }
+
+    /**
+     * Reset alert service state
+     */
+    @PostMapping("/alerts/reset")
+    public ResponseEntity<Map<String, String>> resetAlertState() {
+        alertService.reset();
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Alert state reset successfully");
 
         return ResponseEntity.ok(response);
     }

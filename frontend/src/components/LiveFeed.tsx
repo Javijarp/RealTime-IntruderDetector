@@ -1,35 +1,40 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import Layout from './Layout';
+import VideoStream from './VideoStream';
 
 const LiveFeed: React.FC = () => {
-    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const navigate = useNavigate();
 
-    useEffect(() => {
-        const startVideo = async () => {
-            try {
-                if (videoRef.current) {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    videoRef.current.srcObject = stream;
-                }
-            } catch (error) {
-                console.error('Failed to access camera:', error);
-            }
-        };
-
-        startVideo();
-
-        return () => {
-            if (videoRef.current && videoRef.current.srcObject) {
-                const stream: any = videoRef.current.srcObject;
-                stream.getTracks().forEach((track: any) => track.stop());
-            }
-        };
-    }, []);
+    const handleNavigate = (pageId: string) => {
+        switch (pageId) {
+            case 'stream':
+                navigate('/live-feed');
+                break;
+            case 'events':
+                navigate('/event-log');
+                break;
+            case 'dashboard':
+                navigate('/');
+                break;
+            case 'frames':
+                navigate('/frames');
+                break;
+            default:
+                navigate('/');
+        }
+    };
 
     return (
-        <div>
-            <h2>Live Feed</h2>
-            <video ref={videoRef} autoPlay playsInline style={{ width: '100%', height: 'auto' }} />
-        </div>
+        <Layout currentPage="stream" onNavigate={handleNavigate}>
+            <div>
+                <h2 className="text-2xl font-bold mb-4 text-gray-800">Live Camera Feed</h2>
+                <p className="text-gray-600 mb-4">
+                    Real-time video stream from edge module camera
+                </p>
+                <VideoStream streamId="default" />
+            </div>
+        </Layout>
     );
 };
 

@@ -20,7 +20,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(videoStreamHandler, "/ws/stream")
-                .setAllowedOrigins("http://localhost:5173", "http://localhost:3000")
-                .withSockJS();
+                .setAllowedOriginPatterns("*"); // Allow all origins for Docker environment
     }
 }

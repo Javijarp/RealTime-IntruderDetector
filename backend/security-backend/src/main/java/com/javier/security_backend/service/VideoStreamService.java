@@ -30,7 +30,7 @@ public class VideoStreamService {
 
     public void subscribe(String streamId, WebSocketSession session) {
         streamSubscribers.computeIfAbsent(streamId, k -> new CopyOnWriteArraySet<>())
-                        .add(session);
+                .add(session);
         log.info("Client {} subscribed to stream '{}'", session.getId(), streamId);
     }
 
@@ -52,9 +52,8 @@ public class VideoStreamService {
 
         String base64Frame = java.util.Base64.getEncoder().encodeToString(frameData);
         String json = String.format(
-            "{\"type\": \"frame\", \"streamId\": \"%s\", \"data\": \"%s\", \"contentType\": \"%s\"}",
-            streamId, base64Frame, contentType
-        );
+                "{\"type\": \"frame\", \"streamId\": \"%s\", \"data\": \"%s\", \"contentType\": \"%s\"}",
+                streamId, base64Frame, contentType);
 
         subscribers.forEach(session -> {
             try {
@@ -77,11 +76,15 @@ public class VideoStreamService {
 
     public int getTotalSubscribers() {
         return streamSubscribers.values().stream()
-                               .mapToInt(s -> (int) s.stream().filter(WebSocketSession::isOpen).count())
-                               .sum();
+                .mapToInt(s -> (int) s.stream().filter(WebSocketSession::isOpen).count())
+                .sum();
     }
 
     public int getActiveSessions() {
         return (int) allSessions.stream().filter(WebSocketSession::isOpen).count();
+    }
+
+    public CopyOnWriteArraySet<WebSocketSession> getAllSessions() {
+        return allSessions;
     }
 }

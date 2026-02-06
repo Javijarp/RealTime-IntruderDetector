@@ -32,6 +32,15 @@ class Config:
 
     # Backend URL (point to server IP where backend is running)
     BACKEND_URL: str = "http://192.168.5.74:8080/api/events"
+    
+    # Backend Stream URL for continuous video feed
+    BACKEND_STREAM_URL: str = "http://192.168.5.74:8080/stream/default/frame"
+    
+    # Enable continuous video streaming to backend
+    ENABLE_VIDEO_STREAMING: bool = True
+    
+    # Video stream frame rate (frames per second to send to backend)
+    STREAM_FPS: int = 15  # Lower than capture FPS to reduce bandwidth
 
     # Simulate network failure?
     SIMULATE_NETWORK_FAILURE: bool = False
