@@ -1,6 +1,4 @@
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
+/* Tailwind CSS is loaded via CDN in index.html */
 
 * {
   margin: 0;

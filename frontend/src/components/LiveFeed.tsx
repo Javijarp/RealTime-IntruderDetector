@@ -5,9 +5,13 @@ const LiveFeed: React.FC = () => {
 
     useEffect(() => {
         const startVideo = async () => {
-            if (videoRef.current) {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                videoRef.current.srcObject = stream;
+            try {
+                if (videoRef.current) {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    videoRef.current.srcObject = stream;
+                }
+            } catch (error) {
+                console.error('Failed to access camera:', error);
             }
         };
 

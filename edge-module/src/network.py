@@ -59,25 +59,42 @@ def simulated_http_post(event, frame=None) -> bool:
         # Simulate network latency (5-20 ms)
         time.sleep(random.uniform(0.005, 0.020))
         
-        # Prepare multipart form data
-        files = {
-            'event': (None, json.dumps(payload), 'application/json')
-        }
-        
-        # Add frame image if provided
+        # Encode frame if provided
+        frame_bytes = None
         if frame is not None:
             frame_bytes = _encode_frame(frame)
             if frame_bytes:
-                files['frameImage'] = ('frame.jpg', frame_bytes, 'image/jpeg')
                 log(f"[NETWORK] Frame encoded: {len(frame_bytes)} bytes")
         
-        response = requests.post(
-            Config.BACKEND_URL,
-            files=files,
-            timeout=5
-        )
+        # Send as JSON body with optional frame
+        if frame_bytes:
+            # Send as multipart/form-data
+            files = {
+                'frameImage': ('frame.jpg', frame_bytes, 'image/jpeg')
+            }
+            data = {
+                'eventId': payload['eventId'],
+                'entityType': payload['entityType'],
+                'confidence': payload['confidence'],
+                'frameId': payload['frameId'],
+                'timestamp': payload['timestamp']
+            }
+            response = requests.post(
+                Config.BACKEND_URL,
+                data=data,
+                files=files,
+                timeout=5
+            )
+        else:
+            # Send as JSON only
+            response = requests.post(
+                Config.BACKEND_URL,
+                json=payload,
+                headers={'Content-Type': 'application/json'},
+                timeout=5
+            )
         
-        if response.status_code == 201:
+        if response.status_code in [200, 201]:
             log(f"[NETWORK] ✓ Event sent successfully. Response: {response.status_code}")
             return True
         else:

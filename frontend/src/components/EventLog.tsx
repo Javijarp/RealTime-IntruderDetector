@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { fetchEvents } from '../services/api';
+import { DetectionEvent, fetchEvents } from '../services/api';
 
 const EventLog: React.FC = () => {
-    const [events, setEvents] = useState([]);
+    const [events, setEvents] = useState<DetectionEvent[]>([]);
 
     useEffect(() => {
         const getEvents = async () => {
             const fetchedEvents = await fetchEvents();
-            setEvents(fetchedEvents);
+            setEvents(fetchedEvents as DetectionEvent[]);
         };
 
         getEvents();
@@ -21,7 +21,7 @@ const EventLog: React.FC = () => {
             <h2>Event Log</h2>
             <ul>
                 {events.map((event) => (
-                    <li key={event.event_id}>
+                    <li key={event.id}>
                         <strong>{event.entity_type}</strong> detected with confidence {event.confidence} at {event.timestamp}
                     </li>
                 ))}
