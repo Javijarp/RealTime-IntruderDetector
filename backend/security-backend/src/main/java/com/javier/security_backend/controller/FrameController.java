@@ -24,7 +24,7 @@ import com.javier.security_backend.service.FrameService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/frames")
+@RequestMapping("/frames")
 public class FrameController {
 
     private static final Logger log = LoggerFactory.getLogger(FrameController.class);

@@ -17,7 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.javier.security_backend.service.VideoStreamService;
 
 @RestController
-@RequestMapping("/api/stream")
+@RequestMapping("/stream")
 public class StreamController {
 
     private static final Logger log = LoggerFactory.getLogger(StreamController.class);
@@ -58,7 +58,8 @@ public class StreamController {
 
             Map<String, String> response = new HashMap<>();
             response.put("status", "success");
-            response.put("message", "Frame broadcast to " + videoStreamService.getSubscriberCount(streamId) + " subscribers");
+            response.put("message",
+                    "Frame broadcast to " + videoStreamService.getSubscriberCount(streamId) + " subscribers");
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {

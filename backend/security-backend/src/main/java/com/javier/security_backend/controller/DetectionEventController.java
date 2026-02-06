@@ -49,7 +49,7 @@ public class DetectionEventController {
         Map<String, String> response = new HashMap<>();
         response.put("status", "UP");
         response.put("message", "Security Backend API is running");
-        response.put("endpoints", "/api/events");
+        response.put("endpoints", "/events");
         return ResponseEntity.ok(response);
     }
 
@@ -57,7 +57,7 @@ public class DetectionEventController {
      * Endpoint for edge module to POST detection events with optional frame image
      * Handles both JSON body and multipart form-data with individual fields
      */
-    @PostMapping("/api/events")
+    @PostMapping(value = "/events", consumes = { "application/json", "multipart/form-data" })
     public ResponseEntity<Map<String, Object>> createEvent(
             @RequestParam(value = "eventId", required = false) Long eventId,
             @RequestParam(value = "entityType", required = false) String entityType,
@@ -131,7 +131,7 @@ public class DetectionEventController {
     /**
      * Get all events (for frontend)
      */
-    @GetMapping("/api/events")
+    @GetMapping("/events")
     public ResponseEntity<List<DetectionEvent>> getAllEvents() {
         return ResponseEntity.ok(service.getAllEvents());
     }
@@ -139,7 +139,7 @@ public class DetectionEventController {
     /**
      * Get unprocessed events (for frontend polling or face recognition queue)
      */
-    @GetMapping("/api/events/unprocessed")
+    @GetMapping("/events/unprocessed")
     public ResponseEntity<List<DetectionEvent>> getUnprocessedEvents() {
         return ResponseEntity.ok(service.getUnprocessedEvents());
     }
@@ -147,7 +147,7 @@ public class DetectionEventController {
     /**
      * Get events by type (Person or Dog)
      */
-    @GetMapping("/api/events/type/{entityType}")
+    @GetMapping("/events/type/{entityType}")
     public ResponseEntity<List<DetectionEvent>> getEventsByType(@PathVariable String entityType) {
         return ResponseEntity.ok(service.getEventsByType(entityType));
     }
@@ -155,7 +155,7 @@ public class DetectionEventController {
     /**
      * Get single event by ID
      */
-    @GetMapping("/api/events/{id}")
+    @GetMapping("/events/{id}")
     public ResponseEntity<DetectionEvent> getEventById(@PathVariable Long id) {
         return service.getEventById(id)
                 .map(ResponseEntity::ok)
@@ -165,7 +165,7 @@ public class DetectionEventController {
     /**
      * Mark event as processed (after face recognition or frontend acknowledgment)
      */
-    @PatchMapping("/api/events/{id}/process")
+    @PatchMapping("/events/{id}/process")
     public ResponseEntity<Map<String, String>> markAsProcessed(@PathVariable Long id) {
         service.markAsProcessed(id);
 
