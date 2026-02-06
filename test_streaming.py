@@ -39,18 +39,20 @@ def test_frame_upload():
     """Test uploading a frame to the stream endpoint."""
     print("\n2. Testing frame upload...")
     try:
-        # Create a test frame (320x240 black image with white text)
-        frame = cv2.imread("test_frame.jpg") if cv2.os.path.exists("test_frame.jpg") else None
+        import numpy as np
         
-        if frame is None:
-            print("   - Generating test frame...")
-            frame = cv2.imread(cv2.samples.findFile("lena.jpg"))
-            if frame is None:
-                # Create a simple test pattern
-                import numpy as np
-                frame = np.zeros((240, 320, 3), dtype=np.uint8)
-                cv2.putText(frame, "Test Frame", (50, 120), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        # Create a simple test frame (320x240 with colored background and text)
+        print("   - Generating test frame...")
+        frame = np.zeros((240, 320, 3), dtype=np.uint8)
+        
+        # Add a blue background
+        frame[:, :] = (50, 100, 150)  # BGR format
+        
+        # Add text
+        cv2.putText(frame, "Test Frame", (50, 120), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        cv2.putText(frame, "Streaming Test", (30, 180), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (200, 200, 200), 1)
         
         # Encode frame as JPEG
         success, encoded = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
@@ -91,9 +93,11 @@ def test_continuous_streaming(duration=5):
     """Test continuous frame streaming."""
     print(f"\n3. Testing continuous streaming ({duration} seconds)...")
     try:
-        # Create test frame
         import numpy as np
+        
+        # Create base test frame with colored background
         base_frame = np.zeros((240, 320, 3), dtype=np.uint8)
+        base_frame[:, :] = (50, 100, 150)  # Blue background (BGR)
         
         start_time = time.time()
         frames_sent = 0
