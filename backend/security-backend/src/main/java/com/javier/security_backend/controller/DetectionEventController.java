@@ -54,64 +54,69 @@ public class DetectionEventController {
     }
 
     /**
-     * Endpoint for edge module to POST detection events with optional frame image
-     * Handles both JSON body and multipart form-data with individual fields
+     * Endpoint for edge module to POST detection events (JSON only)
      */
-    @PostMapping(value = "/events", consumes = { "application/json", "multipart/form-data" })
-    public ResponseEntity<Map<String, Object>> createEvent(
-            @RequestParam(value = "eventId", required = false) Long eventId,
-            @RequestParam(value = "entityType", required = false) String entityType,
-            @RequestParam(value = "confidence", required = false) Double confidence,
-            @RequestParam(value = "frameId", required = false) Integer frameId,
-            @RequestParam(value = "timestamp", required = false) String timestamp,
-            @RequestParam(value = "frameImage", required = false) MultipartFile frameImage,
-            @RequestBody(required = false) DetectionEventDTO dtoBody) {
+    @PostMapping(value = "/events", consumes = "application/json")
+    public ResponseEntity<Map<String, Object>> createEventJson(@RequestBody @Valid DetectionEventDTO dto) {
+        try {
+            log.info("Received detection event (JSON): {}", dto);
+            DetectionEvent savedEvent = service.saveEvent(dto);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Event received successfully");
+            response.put("eventId", savedEvent.getId());
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+        } catch (Exception e) {
+            log.error("Error saving event: {}", e.getMessage(), e);
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error saving event: " + e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint for edge module to POST detection events with frame image
+     * (multipart)
+     */
+    @PostMapping(value = "/events", consumes = "multipart/form-data")
+    public ResponseEntity<Map<String, Object>> createEventMultipart(
+            @RequestParam("eventId") Long eventId,
+            @RequestParam("entityType") String entityType,
+            @RequestParam("confidence") Double confidence,
+            @RequestParam("frameId") Integer frameId,
+            @RequestParam("timestamp") String timestamp,
+            @RequestParam(value = "frameImage", required = false) MultipartFile frameImage) {
 
         try {
-            DetectionEventDTO dto = null;
+            // Build DTO from form parameters
+            DetectionEventDTO dto = new DetectionEventDTO(eventId, entityType, confidence, frameId, timestamp);
+            log.info("Received detection event (multipart): {}", dto);
 
-            // Check if data came as form parameters (multipart) or JSON body
-            if (dtoBody != null) {
-                dto = dtoBody;
-            } else if (eventId != null && entityType != null && confidence != null && frameId != null
-                    && timestamp != null) {
-                // Build DTO from form parameters
-                dto = new DetectionEventDTO(eventId, entityType, confidence, frameId, timestamp);
-            }
-
-            if (dto == null && frameImage == null) {
-                throw new IllegalArgumentException("Either detection event data or frame image must be provided");
-            }
-
-            DetectionEvent savedEvent = null;
+            DetectionEvent savedEvent = service.saveEvent(dto);
             Frame savedFrame = null;
-
-            // Save detection event
-            if (dto != null) {
-                log.info("Received detection event: {}", dto);
-                savedEvent = service.saveEvent(dto);
-            }
 
             // Save frame image if provided
             if (frameImage != null && !frameImage.isEmpty()) {
                 log.info("Saving frame image: {} bytes", frameImage.getSize());
-                Integer frameNumber = dto != null ? dto.getFrameId() : null;
                 savedFrame = frameService.saveFrame(
                         frameImage.getBytes(),
                         frameImage.getContentType(),
-                        frameNumber);
+                        frameId);
 
-                // Link frame to detection event if both exist
-                if (savedEvent != null && savedFrame != null) {
-                    savedEvent.setFrameData(savedFrame);
-                }
+                // Link frame to detection event
+                savedEvent.setFrameData(savedFrame);
             }
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Event received successfully");
-            if (savedEvent != null)
-                response.put("eventId", savedEvent.getId());
+            response.put("eventId", savedEvent.getId());
             if (savedFrame != null)
                 response.put("frameId", savedFrame.getId());
 
