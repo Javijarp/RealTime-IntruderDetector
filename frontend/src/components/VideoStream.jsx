@@ -31,7 +31,8 @@ export default function VideoStream({ streamId = "default" }) {
     const client = new WebSocketClient(wsUrl);
 
     client.on("connected", () => {
-      console.log("Connected to video stream");
+      console.log("✅ Connected to video stream WebSocket");
+      console.log("📡 Subscribing to stream:", streamId);
       setIsConnected(true);
       addAlert("Connected to video stream", "success");
 
@@ -40,13 +41,16 @@ export default function VideoStream({ streamId = "default" }) {
         type: "subscribe",
         streamId: streamId,
       });
+      console.log("✉️ Subscription message sent");
     });
 
     client.on("frame", (message) => {
+      console.log("📹 Frame received:", message.streamId);
       if (!isPlaying) return;
 
       try {
         const { data, contentType } = message;
+        console.log("🎬 Decoding frame, size:", data ? data.length : 0);
         const frameData = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
         const blob = new Blob([frameData], { type: contentType });
         const url = URL.createObjectURL(blob);

@@ -57,6 +57,7 @@ def send_stream_frame(frame) -> bool:
         # Encode frame with moderate quality for streaming
         frame_bytes = _encode_frame(frame, quality=75)
         if not frame_bytes:
+            log(f"[STREAM] Failed to encode frame")
             return False
         
         # Send to stream endpoint
@@ -76,8 +77,14 @@ def send_stream_frame(frame) -> bool:
         
         return response.status_code in [200, 201]
         
+    except requests.exceptions.ConnectionError as e:
+        log(f"[STREAM] Connection error: Cannot reach {Config.BACKEND_STREAM_URL}")
+        return False
+    except requests.exceptions.Timeout as e:
+        log(f"[STREAM] Timeout error: Server not responding")
+        return False
     except Exception as e:
-        # Silently fail for streaming to avoid log spam
+        log(f"[STREAM] Error sending frame: {type(e).__name__} - {str(e)}")
         return False
 
 
