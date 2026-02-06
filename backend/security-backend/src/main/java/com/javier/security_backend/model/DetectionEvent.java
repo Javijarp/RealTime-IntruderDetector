@@ -22,36 +22,36 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DetectionEvent {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @Column(name = "event_id", unique = true, nullable = false)
+
+    @Column(name = "event_id", nullable = false)
     private Long eventId;
-    
+
     @Column(name = "entity_type", nullable = false)
     private String entityType;
-    
+
     @Column(name = "confidence", nullable = false)
     private Double confidence;
-    
+
     @Column(name = "frame_id", nullable = false)
     private Integer frameId;
-    
+
     @Column(name = "timestamp", nullable = false)
     private Instant timestamp;
-    
+
     @Column(name = "processed", nullable = false)
     private Boolean processed = false;
-    
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
-    
+
     @OneToOne(cascade = CascadeType.ALL, optional = true)
     @JoinColumn(name = "frame_data_id", referencedColumnName = "id")
     private Frame frameData;
-    
+
     @PrePersist
     protected void onCreate() {
         createdAt = Instant.now();
