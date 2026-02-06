@@ -24,7 +24,7 @@ export default function VideoStream({ streamId = "default" }) {
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     // Use the backend server IP directly - change this to match your backend
     const wsHost = "192.168.5.74:8080";  // Backend server address
-    const wsUrl = `${wsProtocol}//${wsHost}/ws/stream`;
+    const wsUrl = `${wsProtocol}//${wsHost}/api/ws/stream`;
 
     console.log("VideoStream connecting to:", wsUrl);
 

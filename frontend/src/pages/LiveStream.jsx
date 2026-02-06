@@ -116,7 +116,7 @@ export default function LiveStream() {
             <p className="mb-2">
               The frontend automatically connects to{" "}
               <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
-                ws://localhost:8080/ws/stream
+                ws://192.168.5.74:8080/api/ws/stream
               </code>
             </p>
           </div>

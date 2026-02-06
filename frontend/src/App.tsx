@@ -10,10 +10,10 @@ import Settings from './pages/Settings';
 import './styles/App.css';
 
 const App: React.FC = () => {
-    // WebSocket URL - connect through nginx proxy (same host as frontend)
+    // WebSocket URL - connect to backend for alerts
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsHost = window.location.host; // includes hostname:port (e.g., "192.168.5.74:3000")
-    const wsUrl = `${wsProtocol}//${wsHost}/ws/stream`;
+    const wsHost = '192.168.5.74:8080'; // Backend server address
+    const wsUrl = `${wsProtocol}//${wsHost}/api/ws/stream`;
 
     console.log('WebSocket connecting to:', wsUrl);
 
