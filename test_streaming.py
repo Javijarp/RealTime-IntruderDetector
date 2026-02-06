@@ -11,7 +11,7 @@ import cv2
 import io
 
 # Configuration
-BACKEND_URL = "http://192.168.5.74:8080"
+BACKEND_URL = "http://192.168.5.74:8080/api"
 STREAM_ENDPOINT = f"{BACKEND_URL}/stream/default/frame"
 HEALTH_ENDPOINT = f"{BACKEND_URL}/stream/health"
 
