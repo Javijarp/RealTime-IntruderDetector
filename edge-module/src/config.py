@@ -30,8 +30,8 @@ class Config:
     # Minimum confidence threshold for YOLO detections
     CONFIDENCE_THRESHOLD: float = 0.6
 
-    # Backend URL (simulated)
-    BACKEND_URL: str = "http://localhost:8080/api/events"
+    # Backend URL (point to server IP where backend is running)
+    BACKEND_URL: str = "http://192.168.5.74:8080/api/events"
 
     # Simulate network failure?
     SIMULATE_NETWORK_FAILURE: bool = False
