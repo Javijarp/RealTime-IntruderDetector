@@ -56,7 +56,7 @@ const EventLog: React.FC = () => {
                                             <span className="font-medium text-blue-600">{(event.confidence * 100).toFixed(1)}%</span>
                                         </div>
                                         <span className="text-sm text-gray-500">
-                                            {new Date(event.timestamp).toLocaleString()}
+                                            {event.timestamp ? new Date(event.timestamp).toLocaleString() : 'N/A'}
                                         </span>
                                     </div>
                                 </li>

@@ -20,11 +20,10 @@ export default function VideoStream({ streamId = "default" }) {
   const frameTimestampRef = useRef(Date.now());
 
   useEffect(() => {
-    // Connect to WebSocket - use dynamic host
+    // Connect to WebSocket - use relative URL for nginx proxy
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    // Use the backend server IP directly - change this to match your backend
-    const wsHost = "192.168.5.74:8080";  // Backend server address
-    const wsUrl = `${wsProtocol}//${wsHost}/api/ws/stream`;
+    const wsHost = window.location.host;  // Use current host (nginx will proxy)
+    const wsUrl = `${wsProtocol}//${wsHost}/ws/stream`;  // nginx proxies /ws/ to backend /api/ws/
 
     console.log("VideoStream connecting to:", wsUrl);
 
