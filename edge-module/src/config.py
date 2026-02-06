@@ -34,7 +34,7 @@ class Config:
     BACKEND_URL: str = "http://192.168.5.74:8080/api/events"
     
     # Backend Stream URL for continuous video feed
-    BACKEND_STREAM_URL: str = "http://192.168.5.74:8080/stream/default/frame"
+    BACKEND_STREAM_URL: str = "http://192.168.5.74:8080/api/stream/default/frame"
     
     # Enable continuous video streaming to backend
     ENABLE_VIDEO_STREAMING: bool = True
