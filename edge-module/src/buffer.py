@@ -55,6 +55,40 @@ class LocalBuffer:
                 f"Pendientes en buffer: {len(self._buffer)}",
             )
 
+    def add(self, event: DetectionEvent) -> None:
+        """
+        Alias for push() - add event to buffer.
+
+        Args:
+            event (DetectionEvent): Event to buffer
+        """
+        self.push(event)
+
+    def get_all(self) -> list[DetectionEvent]:
+        """
+        Get all pending events without consuming buffer.
+
+        Returns:
+            list: All buffered events in order (copy)
+        """
+        with self._lock:
+            return list(self._buffer)
+
+    def remove(self, event: DetectionEvent) -> None:
+        """
+        Remove specific event from buffer.
+
+        Args:
+            event (DetectionEvent): Event to remove
+        """
+        with self._lock:
+            try:
+                self._buffer.remove(event)
+                log(f"[BUFFER] Evento eliminado del buffer. Pendientes: {len(self._buffer)}")
+            except ValueError:
+                # Event not in buffer, ignore
+                pass
+
     def flush(self) -> list[DetectionEvent]:
         """
         Extract all pending events (consumes buffer).
