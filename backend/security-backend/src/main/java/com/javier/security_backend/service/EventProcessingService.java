@@ -4,10 +4,8 @@ import com.javier.security_backend.dto.DetectionEventDTO;
 import com.javier.security_backend.model.DetectionEvent;
 import com.javier.security_backend.repository.DetectionEventRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.javier.security_backend.service.WebSocketNotificationService;
 
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -269,6 +267,8 @@ public class EventProcessingService {
      */
     @lombok.Data
     @lombok.Builder
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
     public static class SystemStats {
         private int eventsReceived;
         private int eventsProcessed;
