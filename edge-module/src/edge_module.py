@@ -300,10 +300,8 @@ class EdgeModule:
             # Encolar evento para transmisión
             try:
                 self._event_queue.put_nowait(event)
-                with self._stats_lock:
-                    self._stats["events_sent"] += 1
-                log(f"[PROCESO] ✓ Evento creado: {entity_type} "
-                    f"(confianza: {confidence:.2f})")
+                log(f"[PROCESO] ✓ Evento creado y encolado: {entity_type} "
+                    f"(confianza: {confidence:.2f}, queue_size: {self._event_queue.qsize()})")
             except queue.Full:
                 log(f"[PROCESO] ⚠ Cola de eventos llena. Evento descartado.")
 
@@ -311,12 +309,14 @@ class EdgeModule:
     def _transmit_thread(self) -> None:
         """Transmit events with semaphore-controlled concurrent HTTP requests."""
         log("[ENVIO] Hilo iniciado con semáforo HTTP (max 3 simultáneos)")
+        log(f"[ENVIO] Backend URL: {Config.BACKEND_URL}")
         last_retry = time.perf_counter()
 
         while self._running:
             try:
                 # Obtener evento de la cola (timeout 0.1s)
                 event = self._event_queue.get(timeout=0.1)
+                log(f"[ENVIO] Evento extraído de cola (queue_size: {self._event_queue.qsize()})")
                 
                 # ═══════════════════════════════════════════════════════════════
                 # SEMÁFORO 3: Adquirir semáforo de transmisión HTTP
@@ -391,7 +391,11 @@ class EdgeModule:
             frame=frame_to_send
         )
 
-        if not success:
+        if success:
+            with self._stats_lock:
+                self._stats["events_sent"] += 1
+            log(f"[ENVIO] ✓ Evento enviado exitosamente (total: {self._stats['events_sent']})")
+        else:
             log(f"[ENVIO] ✗ Fallo al enviar evento. Guardando en buffer local...")
             self._local_buffer.add(event)
             with self._stats_lock:
