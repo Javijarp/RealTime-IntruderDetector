@@ -10,6 +10,18 @@ build/
 gradle/
 *.log
 
+# Spring Boot / Gradle
+bin/
+out/
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+HELP.md
+.gradletasknamecache
+.settings/
+
 # IDE
 .vscode/
 .idea/
@@ -35,14 +47,34 @@ build/
 .env.local
 .env.*.local
 
+# Next.js
+.next/
+out/
+.vercel
+.turbo
+
+# Vite
+.vite/
+vite.config.*.timestamp-*
+
 # Python / Edge Module
 __pycache__/
 *.py[cod]
-*$py.class
+*$py.c
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/lass
 *.so
 .Python
 env/
 venv/
+docker-compose.*.yml
+!docker-compose.yml
+*.dockerfile
+.docker/
 ENV/
 .venv
 pip-log.txt
@@ -79,3 +111,214 @@ ehthumbs.db
 .idea/
 dist/
 node_modules/
+
+# === SENSITIVE DATA & SECRETS ===
+
+# Environment & Configuration
+.env
+.env.*
+.env.production
+.env.development
+.env.test
+!**/src/main/resources/application.properties
+!**/src/test/resources/application.properties
+
+# Integration/Test Environment Files
+integration/.env
+integration/*.env
+!integration/.env.example
+!.env.example
+!.env.sample
+*.env
+config.local.*
+secrets.*
+.secrets/
+application-local.properties
+application-prod.properties
+application-*.properties
+!application.properties
+
+# Credentials & Keys
+*.key
+*.pem
+*.p12
+*.pfx
+*.cer
+*.crt
+*.der
+*.csr
+*.keystore
+*.jks
+*.truststore
+credentials.json
+credentials.yml
+credentials.yaml
+secrets.json
+secrets.yml
+secrets.yaml
+auth.json
+token.json
+service-account*.json
+.credentials/
+.secrets/
+.ssh/
+
+# Logs & Debug Files
+*.log
+*.log.*
+logs/
+log/
+*.tmp
+*.temp
+debug.log
+error.log
+access.log
+combined.log
+application.log
+spring.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# Database Files & Backups
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+*.sql
+*.dump
+*.backup
+*.bak
+*.old
+backups/
+backup/
+dumps/
+database/
+*.mdb
+*.accdb
+
+# User Uploaded Content (Face Recognition System Specific)
+uploads/
+uploaded/
+user-uploads/
+media/
+images/
+photos/
+videos/
+recordings/
+captures/
+faces/
+face-data/
+user-images/
+user-videos/
+training-data/
+test-images/
+test-videos/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.flv
+*.wmv
+*.webm
+
+# ML Models & Training Data
+models/
+*.pt
+*.pth
+*.onnx
+*.pb
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.model
+*.weights
+*.ckpt
+checkpoints/
+trained-models/
+model-checkpoints/
+embeddings/
+features/
+datasets/
+training-datasets/
+!yolov8n.pt
+
+# Session Data & Cache
+*.session
+session/
+sessions/
+.cache/
+cache/
+tmp/
+temp/
+.tmp/
+.temp/
+
+# Authentication & JWT
+jwt.secret
+jwt-secret.txt
+refresh-tokens/
+access-tokens/
+*.token
+
+# Docker Secrets
+docker-compose.override.yml
+.docker/
+docker-secrets/
+.dockersecrets/
+
+# Kubernetes Secrets
+*-secret.yaml
+*-secret.yml
+secrets.k8s.yaml
+
+# API Keys & Service Configs
+*apikey*
+*api-key*
+*api_key*
+firebase-adminsdk*.json
+*-firebase-*.json
+google-services.json
+GoogleService-Info.plist
+
+# Monitoring & Analytics
+.monitoring/
+analytics/
+metrics/
+*.metrics
+
+
+# Build Artifacts & Generated Files
+**/generated/
+**/generated-sources/
+**/generated-test-sources/
+**/resolvedMainClassName
+
+# Stream/Video Test Files
+*.stream
+test-stream.*
+stream-*.mp4
+captured-*.jpg
+captured-*.png
+# Personal Notes & TODO
+TODO.local.md
+NOTES.local.md
+personal-notes/
+.notes/
+
+# Test & Development Data
+test-data/
+dev-data/
+sample-data/
+mock-data/
+fixtures/local/
+
+# Sensitive Reports
+security-report.*
+audit-report.*
+*.report
