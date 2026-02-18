@@ -1,7 +1,33 @@
 import { X } from "lucide-react";
 import React from "react";
+import { getFrameImageSrc } from "../utils/imageUtils";
 
-export default function EventDetail({ event, onClose }) {
+interface Frame {
+  id: number;
+  frameNumber: number;
+  imageData?: string;
+  imageType: string;
+  imagePath?: string;
+  timestamp: string;
+}
+
+interface Event {
+  id?: number;
+  eventId?: number;
+  entityType: string;
+  confidence: number;
+  frameId?: number;
+  timestamp?: string;
+  frameData?: Frame;
+}
+
+interface EventDetailProps {
+  event: Event;
+  onClose: () => void;
+}
+
+const EventDetail: React.FC<EventDetailProps> = ({ event, onClose }) => {
+  const imageSrc = event.frameData ? getFrameImageSrc(event.frameData) : null;
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-96 overflow-y-auto">
@@ -17,6 +43,25 @@ export default function EventDetail({ event, onClose }) {
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {/* Frame Preview */}
+          {imageSrc && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Frame Preview
+              </label>
+              <div className="relative bg-gray-100 rounded-lg overflow-hidden max-h-96">
+                <img
+                  src={imageSrc}
+                  alt="Event frame"
+                  className="w-full h-auto"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Event ID */}
             <div>
@@ -84,10 +129,14 @@ export default function EventDetail({ event, onClose }) {
               </label>
               <div className="p-3 bg-gray-50 rounded-lg">
                 <p className="text-gray-900">
-                  {new Date(event.timestamp).toLocaleString()}
+                  {event.timestamp
+                    ? new Date(event.timestamp).toLocaleString()
+                    : "N/A"}
                 </p>
                 <p className="text-sm text-gray-600 mt-1">
-                  {new Date(event.timestamp).toISOString()}
+                  {event.timestamp
+                    ? new Date(event.timestamp).toISOString()
+                    : "N/A"}
                 </p>
               </div>
             </div>
@@ -101,16 +150,9 @@ export default function EventDetail({ event, onClose }) {
             </p>
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">
-            Close
-          </button>
-        </div>
       </div>
     </div>
   );
-}
+};
+
+export default EventDetail;

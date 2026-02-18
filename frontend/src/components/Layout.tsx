@@ -1,28 +1,36 @@
-import {
-  AlertCircle,
-  BarChart3,
-  Camera,
-  Layers,
-  ListChecks,
-  Menu,
-  X,
-} from "lucide-react";
+import { AlertCircle, BarChart3, Camera, Layers, Menu, X } from "lucide-react";
 import React, { useState } from "react";
 
-export default function Layout({ children, currentPage, onNavigate }) {
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<any>;
+}
+
+interface LayoutProps {
+  children: React.ReactNode;
+  currentPage: string;
+  onNavigate: (page: string) => void;
+}
+
+const Layout: React.FC<LayoutProps> = ({
+  children,
+  currentPage,
+  onNavigate,
+}) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const menuItems = [
+  const menuItems: MenuItem[] = [
     {
       id: "dashboard",
       label: "Dashboard",
       icon: BarChart3,
     },
-    {
-      id: "stream",
-      label: "Live Stream",
-      icon: Camera,
-    },
+    // {
+    //   id: "stream",
+    //   label: "Live Stream",
+    //   icon: Camera,
+    // },
     {
       id: "events",
       label: "Detection Events",
@@ -39,8 +47,9 @@ export default function Layout({ children, currentPage, onNavigate }) {
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
       <div
-        className={`bg-gray-900 text-white transition-all duration-300 ${sidebarOpen ? "w-64" : "w-20"
-          } flex flex-col`}>
+        className={`bg-gray-900 text-white transition-all duration-300 ${
+          sidebarOpen ? "w-64" : "w-20"
+        } flex flex-col`}>
         {/* Logo */}
         <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
           {sidebarOpen && (
@@ -72,10 +81,11 @@ export default function Layout({ children, currentPage, onNavigate }) {
               <button
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive
                     ? "bg-blue-600 text-white"
                     : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                  }`}>
+                }`}>
                 <Icon className="w-5 h-5 flex-shrink-0" />
                 {sidebarOpen && (
                   <span className="text-sm font-medium">{item.label}</span>
@@ -101,9 +111,20 @@ export default function Layout({ children, currentPage, onNavigate }) {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Content Area */}
+        {/* Top Bar */}
+        <div className="bg-white shadow">
+          <div className="px-6 py-4">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Face Recognition System
+            </h1>
+          </div>
+        </div>
+
+        {/* Content */}
         <div className="flex-1 overflow-auto p-6">{children}</div>
       </div>
     </div>
   );
-}
+};
+
+export default Layout;

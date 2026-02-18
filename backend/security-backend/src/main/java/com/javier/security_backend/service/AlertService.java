@@ -9,10 +9,9 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketSession;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.javier.security_backend.handler.AlertHandler;
 import com.javier.security_backend.model.DetectionEvent;
 import com.javier.security_backend.model.Frame;
 
@@ -28,10 +27,10 @@ public class AlertService {
     private Instant lastDetectionTime = null;
     private boolean inNoEntityState = true; // Start in no-entity state
 
-    private final VideoStreamService videoStreamService;
+    private final AlertHandler alertHandler;
 
-    public AlertService(VideoStreamService videoStreamService) {
-        this.videoStreamService = videoStreamService;
+    public AlertService(AlertHandler alertHandler) {
+        this.alertHandler = alertHandler;
     }
 
     /**
@@ -92,17 +91,11 @@ public class AlertService {
             }
 
             String jsonMessage = objectMapper.writeValueAsString(alertMessage);
-            TextMessage textMessage = new TextMessage(jsonMessage);
 
-            // Broadcast to all connected WebSocket sessions
-            for (WebSocketSession session : videoStreamService.getAllSessions()) {
-                if (session.isOpen()) {
-                    session.sendMessage(textMessage);
-                    log.debug("Alert sent to session: {}", session.getId());
-                }
-            }
+            // Broadcast to all connected alert WebSocket sessions
+            alertHandler.broadcastAlert(jsonMessage);
 
-            log.info("Alert broadcast to {} clients", videoStreamService.getActiveSessions());
+            log.info("Alert broadcast to {} clients", alertHandler.getAllSessions().size());
 
         } catch (Exception e) {
             log.error("Error broadcasting alert: {}", e.getMessage(), e);

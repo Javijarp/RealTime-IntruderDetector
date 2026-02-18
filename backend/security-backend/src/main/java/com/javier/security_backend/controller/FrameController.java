@@ -123,4 +123,19 @@ public class FrameController {
     public ResponseEntity<List<Face>> getFacesByEmotion(@PathVariable String emotion) {
         return ResponseEntity.ok(frameService.getFacesByEmotion(emotion));
     }
+
+    /**
+     * Delete all frames from database
+     * DELETE /api/frames
+     */
+    @org.springframework.web.bind.annotation.DeleteMapping
+    public ResponseEntity<Map<String, String>> deleteAllFrames() {
+        log.warn("Deleting all frames from database");
+        frameService.deleteAllFrames();
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "All frames deleted successfully");
+
+        return ResponseEntity.ok(response);
+    }
 }

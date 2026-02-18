@@ -79,4 +79,11 @@ public class DetectionEventService {
             log.info("Event {} marked as processed", id);
         });
     }
+
+    @Transactional
+    public void deleteAllEvents() {
+        long count = repository.count();
+        repository.deleteAll();
+        log.info("Deleted all {} detection events from database", count);
+    }
 }

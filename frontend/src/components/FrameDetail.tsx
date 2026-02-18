@@ -1,7 +1,24 @@
 import { Download, X } from "lucide-react";
 import React from "react";
+import { getFrameImageSrc, hasImageData } from "../utils/imageUtils";
 
-export default function FrameDetail({ frame, onClose }) {
+interface Frame {
+  id: number;
+  frameNumber: number;
+  imageData?: string;
+  imageType: string;
+  imagePath?: string;
+  timestamp: string;
+  detectionEventId?: number;
+}
+
+interface FrameDetailProps {
+  frame: Frame;
+  onClose: () => void;
+}
+
+const FrameDetail: React.FC<FrameDetailProps> = ({ frame, onClose }) => {
+  const imageSrc = getFrameImageSrc(frame);
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -18,18 +35,18 @@ export default function FrameDetail({ frame, onClose }) {
         {/* Content */}
         <div className="p-6 space-y-6">
           {/* Frame Preview */}
-          {frame.imagePath && (
+          {imageSrc && (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Frame Preview
               </label>
               <div className="relative bg-gray-100 rounded-lg overflow-hidden max-h-96">
                 <img
-                  src={frame.imagePath}
+                  src={imageSrc}
                   alt="Frame preview"
                   className="w-full h-auto"
                   onError={(e) => {
-                    e.target.style.display = "none";
+                    (e.target as HTMLImageElement).style.display = "none";
                   }}
                 />
               </div>
@@ -97,75 +114,24 @@ export default function FrameDetail({ frame, onClose }) {
                 </p>
               </div>
             </div>
-
-            {/* Created At */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Created At
-              </label>
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-gray-900">
-                  {frame.createdAt
-                    ? new Date(frame.createdAt).toLocaleString()
-                    : "N/A"}
-                </p>
-              </div>
-            </div>
           </div>
 
-          {/* Faces */}
-          {frame.faces && frame.faces.length > 0 && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Detected Faces ({frame.faces.length})
-              </label>
-              <div className="space-y-3">
-                {frame.faces.map((face, idx) => (
-                  <div
-                    key={idx}
-                    className="border border-gray-200 rounded-lg p-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-600 font-semibold">
-                          Face ID
-                        </p>
-                        <p className="text-sm text-gray-900 font-mono">
-                          {face.faceId || `Face ${idx + 1}`}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600 font-semibold">
-                          Confidence
-                        </p>
-                        <p className="text-sm text-gray-900 font-semibold">
-                          {Math.round((face.confidence || 0) * 100)}%
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {/* Download Button */}
+          {imageSrc && (
+            <div className="flex gap-2">
+              <a
+                href={imageSrc}
+                download={`frame_${frame.frameNumber}.${frame.imageType || "jpg"}`}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <Download className="h-4 w-4" />
+                Download Frame
+              </a>
             </div>
           )}
-
-          {/* Additional Info */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-800">
-              <strong>Note:</strong> This frame was processed by the edge module
-              and stored in the backend.
-            </p>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">
-            Close
-          </button>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default FrameDetail;

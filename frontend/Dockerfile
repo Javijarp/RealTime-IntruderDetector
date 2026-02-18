@@ -27,7 +27,7 @@ RUN rm -rf /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built app from build stage
-COPY --from=build /app/build .
+COPY --from=build /app/dist .
 
 EXPOSE 3000
 

@@ -210,4 +210,19 @@ public class DetectionEventController {
 
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * Delete all detection events from database
+     * DELETE /api/events
+     */
+    @org.springframework.web.bind.annotation.DeleteMapping("/events")
+    public ResponseEntity<Map<String, String>> deleteAllEvents() {
+        log.warn("Deleting all detection events from database");
+        service.deleteAllEvents();
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "All detection events deleted successfully");
+
+        return ResponseEntity.ok(response);
+    }
 }
