@@ -14,6 +14,7 @@ This is the backend service for the Face Recognition System, built using Spring 
 - [Testing](#testing)
 - [Configuration](#configuration)
 - [Logging](#logging)
+- [Advanced Topics](#advanced-topics)
 - [License](#license)
 
 ## Getting Started
@@ -29,11 +30,13 @@ To get started with the backend service, follow the instructions below to set up
 ## Installation
 
 1. Clone the repository:
+
    ```
    git clone https://github.com/yourusername/face-recognition-system.git
    ```
 
 2. Navigate to the backend directory:
+
    ```
    cd face-recognition-system/backend
    ```
@@ -46,6 +49,7 @@ To get started with the backend service, follow the instructions below to set up
 ## Running the Application
 
 To run the application, use the following command:
+
 ```
 mvn spring-boot:run
 ```
@@ -62,6 +66,7 @@ Refer to the `EventController.java` for more details on the API endpoints.
 ## Testing
 
 Unit tests are located in the `src/test/java/com/unibe/service` directory. To run the tests, use the following command:
+
 ```
 mvn test
 ```
@@ -73,6 +78,21 @@ Configuration properties can be found in `src/main/resources/application.propert
 ## Logging
 
 Logging is configured using Logback. The configuration file is located at `src/main/resources/logback.xml`.
+
+## Advanced Topics
+
+### 🔁 Recursiveness & Concurrency
+
+For detailed information about implementing recursive algorithms and concurrency patterns in this project, see:
+
+- **[RECURSIVENESS_GUIDE.md](security-backend/RECURSIVENESS_GUIDE.md)** - Comprehensive guide covering:
+  - Event relationship trees (parent-child detection events)
+  - Alert state history chains with backtracking
+  - Recursive file system operations
+  - Detection event aggregation
+  - Performance considerations and best practices
+
+This guide provides practical examples specific to the face recognition security system, including tree traversal, state machine patterns, and hierarchical data structures.
 
 ## License
 

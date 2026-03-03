@@ -13,6 +13,9 @@ import com.javier.security_backend.dto.DetectionEventDTO;
 import com.javier.security_backend.model.DetectionEvent;
 import com.javier.security_backend.repository.DetectionEventRepository;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
 @Service
 public class DetectionEventService {
 
@@ -85,5 +88,142 @@ public class DetectionEventService {
         long count = repository.count();
         repository.deleteAll();
         log.info("Deleted all {} detection events from database", count);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // RECURSIVE EVENT TREE OPERATIONS
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Add a child event to a parent event
+     * 
+     * @param parentId Parent event ID
+     * @param childId  Child event ID
+     * @return Updated parent event
+     */
+    @Transactional
+    public DetectionEvent addChildEvent(Long parentId, Long childId) {
+        DetectionEvent parent = repository.findById(parentId)
+                .orElseThrow(() -> new RuntimeException("Parent event not found: " + parentId));
+        DetectionEvent child = repository.findById(childId)
+                .orElseThrow(() -> new RuntimeException("Child event not found: " + childId));
+
+        parent.addChild(child);
+        DetectionEvent saved = repository.save(parent);
+        log.info("Added child event {} to parent {}", childId, parentId);
+        return saved;
+    }
+
+    /**
+     * Aggregate statistics across entire event tree
+     * 
+     * @param rootEventId Root event ID
+     * @return Aggregated statistics
+     */
+    public DetectionEventStatistics aggregateEventTree(Long rootEventId) {
+        DetectionEvent root = repository.findById(rootEventId)
+                .orElseThrow(() -> new RuntimeException("Root event not found: " + rootEventId));
+
+        return computeTreeStatistics(root);
+    }
+
+    /**
+     * Helper method for recursive tree statistics computation
+     * 
+     * Time Complexity: O(n) where n = total events in tree
+     * Space Complexity: O(h) where h = height of tree (call stack)
+     */
+    private DetectionEventStatistics computeTreeStatistics(DetectionEvent event) {
+        // BASE CASE: leaf node
+        if (event.getChildEvents() == null || event.getChildEvents().isEmpty()) {
+            return new DetectionEventStatistics(
+                    1, // count
+                    event.getConfidence(), // totalConfidence
+                    event.getConfidence(), // maxConfidence
+                    event.getConfidence() // minConfidence
+            );
+        }
+
+        // RECURSIVE CASE: aggregate children
+        DetectionEventStatistics stats = new DetectionEventStatistics(1,
+                event.getConfidence(),
+                event.getConfidence(),
+                event.getConfidence());
+
+        for (DetectionEvent child : event.getChildEvents()) {
+            DetectionEventStatistics childStats = computeTreeStatistics(child); // RECURSIVE CALL
+            stats = stats.merge(childStats);
+        }
+
+        return stats;
+    }
+
+    /**
+     * Get all root events (events with no parent)
+     * 
+     * @return List of root events
+     */
+    public List<DetectionEvent> getRootEvents() {
+        return repository.findAll().stream()
+                .filter(DetectionEvent::isRoot)
+                .toList();
+    }
+
+    /**
+     * Get tree depth for a specific event
+     * 
+     * @param eventId Event ID
+     * @return Tree depth
+     */
+    public int getEventTreeDepth(Long eventId) {
+        DetectionEvent event = repository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Event not found: " + eventId));
+        return event.getTreeDepth();
+    }
+
+    /**
+     * Get total size of event tree (including all descendants)
+     * 
+     * @param eventId Root event ID
+     * @return Total number of events in tree
+     */
+    public int getEventTreeSize(Long eventId) {
+        DetectionEvent event = repository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Event not found: " + eventId));
+        return event.getTreeSize();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // INNER CLASS: DetectionEventStatistics
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Statistics aggregated across an event tree
+     */
+    @Data
+    @AllArgsConstructor
+    public static class DetectionEventStatistics {
+        private int count;
+        private double totalConfidence;
+        private double maxConfidence;
+        private double minConfidence;
+
+        /**
+         * Calculate average confidence across all events
+         */
+        public double getAverageConfidence() {
+            return count > 0 ? totalConfidence / count : 0.0;
+        }
+
+        /**
+         * Merge this statistics with another (used in recursive aggregation)
+         */
+        public DetectionEventStatistics merge(DetectionEventStatistics other) {
+            return new DetectionEventStatistics(
+                    this.count + other.count,
+                    this.totalConfidence + other.totalConfidence,
+                    Math.max(this.maxConfidence, other.maxConfidence),
+                    Math.min(this.minConfidence, other.minConfidence));
+        }
     }
 }
