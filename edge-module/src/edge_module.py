@@ -5,6 +5,11 @@ import queue
 import time
 import json
 try:
+    import psutil
+except ImportError:
+    psutil = None
+    
+try:
     from .config import Config
     from .models import DetectionEvent
     from .buffer import LocalBuffer
@@ -12,6 +17,14 @@ try:
     from .inference import run_yolo_inference
     from .drawing import draw_boxes
     from .network import simulated_http_post, send_stream_frame
+    from .exceptions import (
+        CameraNotFoundException,
+        CameraInitializationError,
+        CameraDisconnectionError,
+        FrameQueueFullError,
+        EventQueueFullError,
+        OutOfMemoryError,
+    )
 except ImportError:
     from config import Config
     from models import DetectionEvent
@@ -20,6 +33,14 @@ except ImportError:
     from inference import run_yolo_inference
     from drawing import draw_boxes
     from network import simulated_http_post, send_stream_frame
+    from exceptions import (
+        CameraNotFoundException,
+        CameraInitializationError,
+        CameraDisconnectionError,
+        FrameQueueFullError,
+        EventQueueFullError,
+        OutOfMemoryError,
+    )
 
 # Global shared frame (LIVE mode only)
 _shared_frame = SharedFrame()
@@ -80,6 +101,124 @@ class EdgeModule:
             "semaphore_timeouts": 0
         }
 
+    # ─── CAMERA HELPER METHODS ─────────────────────────────────────────
+    def _try_open_camera(self, camera_idx: int):
+        """
+        Attempt to open camera at specified index.
+        
+        Args:
+            camera_idx: Camera device index
+            
+        Returns:
+            cv2.VideoCapture object if successful, None otherwise
+        """
+        import cv2
+        
+        cap = cv2.VideoCapture(camera_idx)
+        if cap.isOpened():
+            return cap
+        cap.release()
+        return None
+    
+    def _initialize_camera_with_retry(self):
+        """
+        Initialize camera with retry logic and exponential backoff.
+        
+        Returns:
+            cv2.VideoCapture object if successful
+            
+        Raises:
+            CameraNotFoundException: If no camera can be opened after all retries
+        """
+        import cv2
+        
+        # Try configured camera index first
+        camera_indices = [Config.CAMERA_INDEX]
+        
+        # Add alternative indices (0, 1, 2, 3) if not already in list
+        for idx in [0, 1, 2, 3]:
+            if idx not in camera_indices:
+                camera_indices.append(idx)
+        
+        # Attempt each camera index with retries
+        for attempt in range(Config.CAMERA_RETRY_ATTEMPTS):
+            for camera_idx in camera_indices:
+                log(f"[CAPTURA] Intento {attempt + 1}/{Config.CAMERA_RETRY_ATTEMPTS}: "
+                    f"probando cámara índice {camera_idx}...")
+                
+                cap = self._try_open_camera(camera_idx)
+                if cap is not None:
+                    log(f"[CAPTURA] ✓ Cámara abierta exitosamente (índice {camera_idx})")
+                    return cap
+                
+                log(f"[CAPTURA] ✗ No se pudo abrir cámara {camera_idx}")
+            
+            # Wait with exponential backoff before next retry
+            if attempt < Config.CAMERA_RETRY_ATTEMPTS - 1:
+                backoff = Config.CAMERA_RETRY_BACKOFF_S[min(attempt, len(Config.CAMERA_RETRY_BACKOFF_S) - 1)]
+                log(f"[CAPTURA] Esperando {backoff}s antes de reintentar...")
+                time.sleep(backoff)
+        
+        # All retries exhausted
+        raise CameraNotFoundException("No se pudo abrir ninguna cámara después de todos los intentos")
+    
+    def _handle_camera_disconnection(self, old_cap):
+        """
+        Handle camera disconnection and attempt reconnection.
+        
+        Args:
+            old_cap: Old VideoCapture object to release
+            
+        Returns:
+            New VideoCapture object if reconnection successful, None otherwise
+        """
+        log("[CAPTURA] ⚠ Cámara desconectada - iniciando procedimiento de reconexión...")
+        
+        # Release old camera handle
+        if old_cap is not None:
+            old_cap.release()
+            log("[CAPTURA] Handle de cámara anterior liberado")
+        
+        # Wait for hardware to stabilize
+        time.sleep(2)
+        
+        # Attempt reconnection (up to 3 attempts)
+        for attempt in range(3):
+            try:
+                log(f"[CAPTURA] Intento de reconexión {attempt + 1}/3...")
+                cap = self._initialize_camera_with_retry()
+                log("[CAPTURA] ✓ Reconexión exitosa!")
+                return cap
+            except CameraNotFoundException:
+                if attempt < 2:
+                    log(f"[CAPTURA] Reconexión fallida, esperando {Config.CAMERA_RECONNECT_INTERVAL_S}s...")
+                    time.sleep(Config.CAMERA_RECONNECT_INTERVAL_S)
+        
+        log("[CAPTURA] ✗ Reconexión fallida después de 3 intentos")
+        return None
+    
+    def _check_memory_pressure(self) -> str:
+        """
+        Check if system is under memory pressure.
+        
+        Returns:
+            str: "OK", "WARNING", or "CRITICAL"
+        """
+        if psutil is None:
+            return "OK"  # Can't check without psutil
+        
+        try:
+            mem = psutil.virtual_memory()
+            
+            if mem.percent >= Config.MEMORY_CRITICAL_THRESHOLD_PERCENT:
+                return "CRITICAL"
+            elif mem.percent >= Config.MEMORY_WARNING_THRESHOLD_PERCENT:
+                return "WARNING"
+            return "OK"
+        except Exception as e:
+            log(f"[MEMORY] Error checking memory: {e}")
+            return "OK"
+
     # ─── THREAD 1: CAPTURE con Control de Semáforo ─────────────────────────
     def _capture_thread(self) -> None:
         """Capture frames from camera (LIVE) or simulate them."""
@@ -89,39 +228,101 @@ class EdgeModule:
             self._capture_simulated()
 
     def _capture_live(self) -> None:
-        """Capture frames from real camera with semaphore-controlled buffer."""
+        """Capture frames from real camera with semaphore-controlled buffer and reconnection logic."""
         import cv2
 
-        cap = None
-        camera_idx = Config.CAMERA_INDEX
-        log(f"[CAPTURA] Intentando abrir cámara en índice {camera_idx}…")
-        cap = cv2.VideoCapture(camera_idx)
-        
-        if cap.isOpened():
-            log(f"[CAPTURA] ✓ Cámara abierta exitosamente (índice {camera_idx})")
-        else:
-            log(f"[CAPTURA] ✗ Error al abrir cámara {camera_idx}. Intentando índice 0...")
-            cap = cv2.VideoCapture(0)
-
-        if cap is None or not cap.isOpened():
-            log("[CAPTURA] ✗✗ FATAL: No se pudo abrir ninguna cámara.")
-            self._running = False
+        # Initialize camera with retry logic
+        try:
+            cap = self._initialize_camera_with_retry()
+        except CameraNotFoundException as e:
+            log(f"[CAPTURA] ✗✗ FATAL: {e}")
+            log("[CAPTURA] Cambiando a modo SIMULACIÓN...")
+            self._capture_simulated()
             return
 
         log("[CAPTURA] Iniciando captura con control de semáforo...")
-        frame_count = 0
+        consecutive_failures = 0
+        camera_reconnecting = False
+        memory_check_counter = 0
+        last_memory_warning = 0
 
         while self._running:
             self._frame_counter += 1
             ret, frame = cap.read()
             
             if not ret:
-                log(f"[CAPTURA] ✗ Error leyendo frame {self._frame_counter}")
+                consecutive_failures += 1
+                log(f"[CAPTURA] ✗ Error leyendo frame {self._frame_counter} "
+                    f"({consecutive_failures}/{Config.CAMERA_FAILURE_THRESHOLD})")
+                
+                # Check if we've hit the disconnection threshold
+                if consecutive_failures >= Config.CAMERA_FAILURE_THRESHOLD:
+                    if not camera_reconnecting:
+                        camera_reconnecting = True
+                        log(f"[CAPTURA] ⚠ ALERTA: {consecutive_failures} fallos consecutivos - "
+                            "Detectada desconexión de cámara")
+                        
+                        # Attempt to reconnect
+                        new_cap = self._handle_camera_disconnection(cap)
+                        
+                        if new_cap is not None:
+                            # Reconnection successful
+                            cap = new_cap
+                            consecutive_failures = 0
+                            camera_reconnecting = False
+                            log("[CAPTURA] ✓ Cámara reconectada, reanudando captura normal")
+                        else:
+                            # Reconnection failed - switch to simulation mode
+                            log("[CAPTURA] ✗ Reconexión fallida - cambiando a modo SIMULACIÓN")
+                            log("[CAPTURA] Se continuarán intentos de reconexión en segundo plano...")
+                            
+                            # Switch to simulation mode for this thread
+                            self._capture_simulated()
+                            return
+                
                 time.sleep(0.1)
                 continue
 
+            # Reset failure counter on successful read
+            if consecutive_failures > 0:
+                log(f"[CAPTURA] ✓ Lectura exitosa - reseteando contador de fallos")
+            consecutive_failures = 0
+            camera_reconnecting = False
+
             with self._stats_lock:
                 self._stats["frames_captured"] += 1
+            
+            # Check memory pressure periodically (every 100 frames)
+            memory_check_counter += 1
+            if memory_check_counter >= 100:
+                memory_check_counter = 0
+                memory_status = self._check_memory_pressure()
+                
+                if memory_status == "CRITICAL":
+                    # Log critical memory warning (max once per 30 seconds)
+                    current_time = time.time()
+                    if current_time - last_memory_warning >= 30:
+                        last_memory_warning = current_time
+                        if psutil:
+                            mem = psutil.virtual_memory()
+                            log(f"[MEMORY] ⚠⚠ CRITICAL: Memoria en {mem.percent:.1f}% "
+                                f"(usado: {mem.used / 1024**3:.1f}GB / {mem.total / 1024**3:.1f}GB)")
+                            log(f"[MEMORY] Aumentando agresividad de descarte de frames")
+                    
+                    # Drop every other frame when memory is critical
+                    if self._frame_counter % 2 == 0:
+                        log(f"[MEMORY] Frame {self._frame_counter} descartado por presión de memoria")
+                        time.sleep(1.0 / 30.0)
+                        continue
+                
+                elif memory_status == "WARNING":
+                    current_time = time.time()
+                    if current_time - last_memory_warning >= 60:
+                        last_memory_warning = current_time
+                        if psutil:
+                            mem = psutil.virtual_memory()
+                            log(f"[MEMORY] ⚠ WARNING: Memoria en {mem.percent:.1f}% "
+                                f"(usado: {mem.used / 1024**3:.1f}GB / {mem.total / 1024**3:.1f}GB)")
 
             # ═══════════════════════════════════════════════════════════════
             # SEMÁFORO 1: Intentar adquirir slot en el buffer
@@ -141,6 +342,8 @@ class EdgeModule:
                     with self._stats_lock:
                         self._stats["frames_dropped"] += 1
                     log(f"[CAPTURA] ⚠ Cola llena. Frame {self._frame_counter} DESCARTADO")
+                    # Log FrameQueueFullError for monitoring
+                    log(f"[CAPTURA] FrameQueueFullError: Queue at capacity")
             else:
                 # No hay slots disponibles en el semáforo
                 with self._stats_lock:
@@ -303,7 +506,19 @@ class EdgeModule:
                 log(f"[PROCESO] ✓ Evento creado y encolado: {entity_type} "
                     f"(confianza: {confidence:.2f}, queue_size: {self._event_queue.qsize()})")
             except queue.Full:
-                log(f"[PROCESO] ⚠ Cola de eventos llena. Evento descartado.")
+                # Queue full - buffer event immediately
+                log(f"[PROCESO] ⚠ EventQueueFullError: Cola de eventos llena (10/10)")
+                log(f"[PROCESO] → Bufferando evento directamente")
+                self._local_buffer.push(event)
+                
+                with self._stats_lock:
+                    self._stats["events_buffered"] += 1
+                    
+                # Alert if happening frequently
+                events_buffered = self._stats.get("events_buffered", 0)
+                if events_buffered % 10 == 0 and events_buffered > 0:
+                    log(f"[PROCESO] ⚠⚠ ALERTA: {events_buffered} eventos enviados "
+                        "directamente al buffer - revisar capacidad de red/transmisión")
 
     # ─── THREAD 3: TRANSMISSION con Semáforo HTTP ──────────────────────────
     def _transmit_thread(self) -> None:

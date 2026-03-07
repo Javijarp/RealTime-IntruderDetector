@@ -19,6 +19,7 @@ python main.py
 edge-module/
 ├── README.md                    # Quick start (this file)
 ├── ARCHITECTURE.md              # Detailed documentation
+├── EXCEPTION_HANDLING.md        # Exception handling plan
 ├── requirements.txt             # Python dependencies
 │
 └── src/

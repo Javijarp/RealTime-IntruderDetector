@@ -53,3 +53,29 @@ class Config:
     # YOLOv8 COCO class IDs
     YOLO_CLASS_PERSON: int = 0
     YOLO_CLASS_DOG: int = 16
+
+    # ── Exception Handling Configuration ────────────────────────
+    # Camera
+    CAMERA_RETRY_ATTEMPTS: int = 5
+    CAMERA_RETRY_BACKOFF_S: list = [1, 2, 4, 8, 16]
+    CAMERA_RECONNECT_INTERVAL_S: int = 30
+    CAMERA_FAILURE_THRESHOLD: int = 10  # consecutive failures before reconnection
+    
+    # Queue
+    FRAME_DROP_RATE_ALERT_THRESHOLD: float = 0.20  # 20%
+    QUEUE_DEPTH_WARNING_THRESHOLD: float = 0.80  # 80% full
+    
+    # Network
+    NETWORK_RETRY_ATTEMPTS: int = 20
+    NETWORK_RETRY_BACKOFF_S: list = [5, 10, 20, 40, 60]
+    CIRCUIT_BREAKER_FAILURE_THRESHOLD: int = 5
+    CIRCUIT_BREAKER_RECOVERY_TIMEOUT_S: int = 30
+    CIRCUIT_BREAKER_SUCCESS_THRESHOLD: int = 2
+    
+    # Timeouts
+    HTTP_EVENT_TIMEOUT_S: int = 5
+    HTTP_STREAM_TIMEOUT_S: int = 2
+    
+    # Resource Limits
+    MEMORY_WARNING_THRESHOLD_PERCENT: float = 75.0
+    MEMORY_CRITICAL_THRESHOLD_PERCENT: float = 90.0
